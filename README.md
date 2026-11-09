@@ -4,9 +4,9 @@ Chrome extension (Manifest V3) that makes Jira issue pages easier to scan for de
 
 ## Features
 
-### Dim Dev Done child items
+### Dim or hide Dev Done child items
 
-On an Epic (or any issue with a child work item table), rows whose status is "Dev Done" are shown at reduced opacity (0.4 by default), so the work that is still open stands out.
+On an Epic (or any issue with a child work item table), rows whose status is "Dev Done" are shown at reduced opacity (0.4 by default), so the work that is still open stands out. Alternatively, turn on **Hide Dev Done items** to remove those rows from view entirely.
 
 Default Dev Done statuses (case-insensitive):
 
@@ -18,7 +18,8 @@ Default Dev Done statuses (case-insensitive):
 
 Settings in the popup (saved to `chrome.storage.sync`, applied to open Jira tabs immediately):
 
-- Turn dimming on or off
+- Dim Dev Done items on or off
+- Hide Dev Done items on or off (turning one on turns the other off)
 - Opacity (0.1 to 1)
 - Full opacity on hover
 - Dev Done statuses list (one per line)
@@ -45,7 +46,7 @@ Matching rows get a `data-jira-helper-dev-done` attribute, and one injected `<st
 | --- | --- |
 | `manifest.json` | Extension manifest |
 | `config.js` | Default settings shared by the content script and popup |
-| `content.js` | Dims Dev Done rows on Jira pages |
+| `content.js` | Dims or hides Dev Done rows on Jira pages |
 | `popup.html` / `popup.css` / `popup.js` | Settings popup |
 | `icons/jira-helper.svg` | Source icon |
 | `tools/generate-icons.js` | Renders the SVG to `icons/icon{16,32,48,128}.png` (`node tools/generate-icons.js`) |

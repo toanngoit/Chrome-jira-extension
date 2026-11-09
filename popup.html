@@ -17,17 +17,25 @@
       <input type="checkbox" id="dimEnabled">
     </label>
 
-    <div class="field">
-      <div class="row">
-        <label for="dimOpacity">Opacity</label>
-        <span id="opacityValue" class="muted"></span>
+    <!-- Shown only while "Dim Dev Done items" is on -->
+    <div id="dimOptions" class="sub-options">
+      <div class="field">
+        <div class="row">
+          <label for="dimOpacity">Opacity</label>
+          <span id="opacityValue" class="muted"></span>
+        </div>
+        <input type="range" id="dimOpacity" min="0.1" max="1" step="0.05">
       </div>
-      <input type="range" id="dimOpacity" min="0.1" max="1" step="0.05">
+
+      <label class="row">
+        <span>Full opacity on hover</span>
+        <input type="checkbox" id="revealOnHover">
+      </label>
     </div>
 
     <label class="row">
-      <span>Full opacity on hover</span>
-      <input type="checkbox" id="revealOnHover">
+      <span>Hide Dev Done items</span>
+      <input type="checkbox" id="hideEnabled">
     </label>
 
     <div class="field">

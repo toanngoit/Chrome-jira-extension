@@ -64,6 +64,18 @@ label.row { cursor: pointer; }
 
 .muted { color: var(--muted); }
 
+[hidden] { display: none !important; }
+
+/* Options that belong to the toggle above them */
+.sub-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: -4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+
 input[type="checkbox"],
 input[type="range"] {
   accent-color: var(--accent);

@@ -1,4 +1,4 @@
-// Dims child work item rows whose status is "Dev Done".
+// Dims (or hides) child work item rows whose status is "Dev Done".
 // Jira is a SPA that re-renders tables often, so rows are re-checked on every DOM mutation.
 (() => {
   const ROW_SELECTOR = 'tr[data-testid="native-issue-table.ui.issue-row"]';
@@ -26,7 +26,10 @@
       (document.head || document.documentElement).append(style);
     }
     const opacity = Math.min(1, Math.max(0, Number(settings.dimOpacity) || 0));
-    style.textContent = settings.dimEnabled
+    // Hide wins over Dim if both are somehow on
+    style.textContent = settings.hideEnabled
+      ? `${ROW_SELECTOR}[${DIM_ATTR}] { display: none !important; }`
+      : settings.dimEnabled
       ? `
         ${ROW_SELECTOR}[${DIM_ATTR}] { opacity: ${opacity}; transition: opacity 0.15s ease; }
         ${settings.revealOnHover ? `${ROW_SELECTOR}[${DIM_ATTR}]:hover { opacity: 1; }` : ""}

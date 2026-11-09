@@ -4,6 +4,8 @@ const $ = (id) => document.getElementById(id);
 
 const els = {
   dimEnabled: $("dimEnabled"),
+  hideEnabled: $("hideEnabled"),
+  dimOptions: $("dimOptions"),
   dimOpacity: $("dimOpacity"),
   revealOnHover: $("revealOnHover"),
   devDoneStatuses: $("devDoneStatuses"),
@@ -13,22 +15,22 @@ const els = {
 };
 
 function render(settings) {
-  els.dimEnabled.checked = settings.dimEnabled;
+  els.dimEnabled.checked = settings.dimEnabled && !settings.hideEnabled;
+  els.hideEnabled.checked = settings.hideEnabled;
   els.dimOpacity.value = settings.dimOpacity;
   els.revealOnHover.checked = settings.revealOnHover;
   els.devDoneStatuses.value = settings.devDoneStatuses.join("\n");
   renderOpacity();
-  renderDisabled();
+  renderDimOptions();
 }
 
 function renderOpacity() {
   els.opacityValue.textContent = Number(els.dimOpacity.value).toFixed(2);
 }
 
-function renderDisabled() {
-  const off = !els.dimEnabled.checked;
-  els.dimOpacity.disabled = off;
-  els.revealOnHover.disabled = off;
+// Dim's own options are only shown while Dim is on
+function renderDimOptions() {
+  els.dimOptions.hidden = !els.dimEnabled.checked;
 }
 
 let savedTimer;
@@ -44,9 +46,25 @@ function parseStatuses(text) {
   return [...new Set(text.split("\n").map((s) => s.trim()).filter(Boolean))];
 }
 
+// Dim and Hide are mutually exclusive: turning one on turns the other off
 els.dimEnabled.addEventListener("change", () => {
-  renderDisabled();
-  save({ dimEnabled: els.dimEnabled.checked });
+  const patch = { dimEnabled: els.dimEnabled.checked };
+  if (els.dimEnabled.checked && els.hideEnabled.checked) {
+    els.hideEnabled.checked = false;
+    patch.hideEnabled = false;
+  }
+  renderDimOptions();
+  save(patch);
+});
+
+els.hideEnabled.addEventListener("change", () => {
+  const patch = { hideEnabled: els.hideEnabled.checked };
+  if (els.hideEnabled.checked && els.dimEnabled.checked) {
+    els.dimEnabled.checked = false;
+    patch.dimEnabled = false;
+  }
+  renderDimOptions();
+  save(patch);
 });
 
 els.dimOpacity.addEventListener("input", () => {
