@@ -1,18 +1,21 @@
-// Dims (or hides) child work item rows whose status is "Dev Done".
+// Dims (or hides) child work item rows whose status, or assignee, is in the user's lists.
 // Jira is a SPA that re-renders tables often, so rows are re-checked on every DOM mutation.
 (() => {
   const ROW_SELECTOR = 'tr[data-testid="native-issue-table.ui.issue-row"]';
-  const DIM_ATTR = "data-jira-helper-dev-done";
+  const DIM_ATTR = "data-jira-helper-match";
   const STYLE_ID = "jira-helper-style";
 
   let settings = { ...JIRA_HELPER_DEFAULTS };
   let doneSet = new Set();
+  let assigneeWords = []; // each entry: one typed name split into lowercase words
 
   const normalize = (text) => (text || "").replace(/\s+/g, " ").trim().toLowerCase();
+  const toWords = (text) => normalize(text).split(/[^\p{L}\p{N}'’]+/u).filter(Boolean);
 
   function applySettings(stored) {
     settings = { ...JIRA_HELPER_DEFAULTS, ...stored };
     doneSet = new Set(settings.devDoneStatuses.map(normalize).filter(Boolean));
+    assigneeWords = settings.assignees.map(toWords).filter((w) => w.length);
     renderStyle();
     scanAll();
   }
@@ -37,14 +40,30 @@
       : "";
   }
 
-  // Index of the "Status" column in the row's table. Header text also holds the
-  // sort/menu labels (e.g. "StatusStatus • Sort in ascending order..."), so match the prefix.
-  function statusColumnIndex(table) {
+  // Index of a column in the row's table. Header text also holds the sort/menu
+  // labels (e.g. "StatusStatus • Sort in ascending order..."), so match the prefix.
+  function columnIndex(table, isHeader) {
     const headers = table?.querySelectorAll("thead tr > *") || [];
-    return [...headers].findIndex((th) => {
-      const text = normalize(th.textContent);
-      return text.startsWith("status") && !text.startsWith("status category");
-    });
+    return [...headers].findIndex((th) => isHeader(normalize(th.textContent)));
+  }
+  const isStatusHeader = (t) => t.startsWith("status") && !t.startsWith("status category");
+  const isAssigneeHeader = (t) => t.startsWith("assignee");
+
+  // Every place a person's name can show up inside an element: each text node on
+  // its own (Jira renders the name twice with no space between, so the combined
+  // textContent reads "Juan LiJuan Li"), plus avatar alt text, aria-labels
+  // (e.g. "Juan Li- edit Assignee") and tooltips
+  function nameTexts(el) {
+    const texts = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) texts.push(walker.currentNode.nodeValue);
+    for (const node of [el, ...el.querySelectorAll("[alt], [aria-label], [title]")]) {
+      for (const attr of ["alt", "aria-label", "title"]) {
+        const value = node.getAttribute(attr);
+        if (value) texts.push(value);
+      }
+    }
+    return texts.filter((t) => normalize(t));
   }
 
   // Returns the status text of a row, or null when it cannot be found
@@ -56,7 +75,7 @@
     if (lozenge && normalize(lozenge.textContent)) return lozenge.textContent;
 
     // 2. Cell under the "Status" column header (the first cell of a row is a <th>)
-    const index = statusColumnIndex(row.closest("table"));
+    const index = columnIndex(row.closest("table"), isStatusHeader);
     if (index >= 0) {
       const cell = row.children[index];
       if (cell && normalize(cell.textContent)) return cell.textContent;
@@ -65,7 +84,36 @@
     return null;
   }
 
-  function isDevDone(row) {
+  // Texts that may hold the row's assignee name, gathered from:
+  // 1. the Assignee cell, <td data-column-type="assignee">
+  // 2. the cell under the "Assignee" column header
+  // 3. any element whose data-testid mentions "assignee" (e.g. "issue.fields.assignee...")
+  function getRowAssigneeTexts(row) {
+    const sources = new Set(
+      row.querySelectorAll('[data-column-type="assignee"], [data-testid*="assignee" i]')
+    );
+    const index = columnIndex(row.closest("table"), isAssigneeHeader);
+    if (index >= 0 && row.children[index]) sources.add(row.children[index]);
+    return [...sources].flatMap(nameTexts);
+  }
+
+  // True when the typed name's words appear, in order and side by side, in the full name
+  function nameMatches(fullName, typedWords) {
+    const words = toWords(fullName);
+    for (let i = 0; i + typedWords.length <= words.length; i++) {
+      if (typedWords.every((w, j) => words[i + j] === w)) return true;
+    }
+    return false;
+  }
+
+  function hasMatchingAssignee(row) {
+    if (!assigneeWords.length) return false;
+    const texts = getRowAssigneeTexts(row);
+    return texts.some((text) => assigneeWords.some((typed) => nameMatches(text, typed)));
+  }
+
+  function hasMatchingStatus(row) {
+    if (!doneSet.size) return false;
     const status = getRowStatus(row);
     if (status != null) return doneSet.has(normalize(status));
 
@@ -77,8 +125,8 @@
   }
 
   function updateRow(row) {
-    const done = isDevDone(row);
-    if (done !== row.hasAttribute(DIM_ATTR)) row.toggleAttribute(DIM_ATTR, done);
+    const match = hasMatchingStatus(row) || hasMatchingAssignee(row);
+    if (match !== row.hasAttribute(DIM_ATTR)) row.toggleAttribute(DIM_ATTR, match);
   }
 
   function scanAll() {

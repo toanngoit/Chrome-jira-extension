@@ -5,6 +5,9 @@
   --border: #d0d7de;
   --hover-bg: #e9f2ff;
   --accent: #0c66e4;
+  --danger: #c9372c;
+  --scrollbar-thumb: #57606a;
+  --scrollbar-thumb-hover: #24292f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -15,6 +18,9 @@
     --border: #3d444d;
     --hover-bg: #1c2b41;
     --accent: #579dff;
+    --danger: #f87168;
+    --scrollbar-thumb: #6e7781;
+    --scrollbar-thumb-hover: #9198a1;
   }
 }
 
@@ -54,7 +60,28 @@ section {
   gap: 8px;
 }
 
-label.row { cursor: pointer; }
+/* Checkbox followed by its label text */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* Collapse/expand button for a toggle's related options */
+.chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.chevron svg { transition: transform 0.15s ease; }
+.chevron[aria-expanded="true"] svg { transform: rotate(180deg); }
 
 .field {
   display: flex;
@@ -63,6 +90,36 @@ label.row { cursor: pointer; }
 }
 
 .muted { color: var(--muted); }
+
+.section-title { font-weight: 600; }
+
+.label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Small "i" badge whose explanation shows as a tooltip on hover/focus */
+.info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+  color: var(--muted);
+  font: italic 600 10px/1 Georgia, serif;
+  cursor: help;
+  user-select: none;
+}
+
+.info:hover,
+.info:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
 
 [hidden] { display: none !important; }
 
@@ -74,6 +131,48 @@ label.row { cursor: pointer; }
   margin-top: -4px;
   padding-left: 10px;
   border-left: 2px solid var(--border);
+}
+
+/* [Home] [issue key] [Go] */
+.quick-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+}
+
+.quick-nav input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.quick-nav input[type="text"]:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.quick-nav input.invalid {
+  border-color: var(--danger);
+  outline-color: var(--danger);
 }
 
 input[type="checkbox"],
@@ -103,6 +202,16 @@ textarea {
   color: var(--fg);
 }
 
+/* Slim, dark scrollbar for long lists */
+textarea {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+textarea:hover {
+  scrollbar-color: var(--scrollbar-thumb-hover) transparent;
+}
+
 textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
@@ -128,4 +237,52 @@ button {
 button:hover {
   background: var(--hover-bg);
   border-color: var(--accent);
+}
+
+/* "More" (…) menu in the footer; the list opens upward, aligned to the right */
+.menu { position: relative; }
+
+.menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.menu-button[aria-expanded="true"] {
+  background: var(--hover-bg);
+  color: var(--fg);
+}
+
+.menu-list {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+}
+
+.menu-list [role="menuitem"] {
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.menu-list [role="menuitem"]:hover,
+.menu-list [role="menuitem"]:focus-visible {
+  background: var(--hover-bg);
+  outline: none;
 }

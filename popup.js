@@ -6,12 +6,15 @@ const els = {
   dimEnabled: $("dimEnabled"),
   hideEnabled: $("hideEnabled"),
   dimOptions: $("dimOptions"),
+  dimToggle: $("dimToggle"),
   dimOpacity: $("dimOpacity"),
   revealOnHover: $("revealOnHover"),
   devDoneStatuses: $("devDoneStatuses"),
+  assignees: $("assignees"),
   opacityValue: $("opacityValue"),
   saved: $("saved"),
-  reset: $("reset"),
+  menuButton: $("menuButton"),
+  menu: $("menu"),
 };
 
 function render(settings) {
@@ -20,6 +23,7 @@ function render(settings) {
   els.dimOpacity.value = settings.dimOpacity;
   els.revealOnHover.checked = settings.revealOnHover;
   els.devDoneStatuses.value = settings.devDoneStatuses.join("\n");
+  els.assignees.value = settings.assignees.join("\n");
   renderOpacity();
   renderDimOptions();
 }
@@ -28,10 +32,26 @@ function renderOpacity() {
   els.opacityValue.textContent = Number(els.dimOpacity.value).toFixed(2);
 }
 
-// Dim's own options are only shown while Dim is on
+// Dim's options are collapsed by default; the expanded state is a popup-only
+// UI preference, so it lives in localStorage rather than synced settings.
+const DIM_EXPANDED_KEY = "dimOptionsExpanded";
+let dimExpanded = false;
+try { dimExpanded = localStorage.getItem(DIM_EXPANDED_KEY) === "1"; } catch {}
+
+// Dim's own options (and the chevron) are only shown while Dim is on
 function renderDimOptions() {
-  els.dimOptions.hidden = !els.dimEnabled.checked;
+  const on = els.dimEnabled.checked;
+  els.dimToggle.hidden = !on;
+  els.dimToggle.setAttribute("aria-expanded", String(dimExpanded));
+  els.dimToggle.title = dimExpanded ? "Hide options" : "Show options";
+  els.dimOptions.hidden = !(on && dimExpanded);
 }
+
+els.dimToggle.addEventListener("click", () => {
+  dimExpanded = !dimExpanded;
+  try { localStorage.setItem(DIM_EXPANDED_KEY, dimExpanded ? "1" : "0"); } catch {}
+  renderDimOptions();
+});
 
 let savedTimer;
 function save(patch) {
@@ -42,7 +62,7 @@ function save(patch) {
   });
 }
 
-function parseStatuses(text) {
+function parseLines(text) {
   return [...new Set(text.split("\n").map((s) => s.trim()).filter(Boolean))];
 }
 
@@ -76,15 +96,60 @@ els.revealOnHover.addEventListener("change", () => {
   save({ revealOnHover: els.revealOnHover.checked });
 });
 
-let statusTimer;
-els.devDoneStatuses.addEventListener("input", () => {
-  clearTimeout(statusTimer);
-  statusTimer = setTimeout(() => save({ devDoneStatuses: parseStatuses(els.devDoneStatuses.value) }), 400);
+// Save list textareas shortly after typing stops
+function saveListOnInput(textarea, key) {
+  let timer;
+  textarea.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => save({ [key]: parseLines(textarea.value) }), 400);
+  });
+}
+saveListOnInput(els.devDoneStatuses, "devDoneStatuses");
+saveListOnInput(els.assignees, "assignees");
+
+// "More" (…) menu
+const menuItems = () => [...els.menu.querySelectorAll('[role="menuitem"]')];
+
+function setMenuOpen(open, { focusButton = false } = {}) {
+  els.menu.hidden = !open;
+  els.menuButton.setAttribute("aria-expanded", String(open));
+  if (open) menuItems()[0]?.focus();
+  else if (focusButton) els.menuButton.focus();
+}
+
+const menuActions = {
+  reset() {
+    render(JIRA_HELPER_DEFAULTS);
+    save({ ...JIRA_HELPER_DEFAULTS });
+  },
+};
+
+els.menuButton.addEventListener("click", () => setMenuOpen(els.menu.hidden));
+
+els.menu.addEventListener("click", (e) => {
+  const item = e.target.closest('[role="menuitem"]');
+  if (!item) return;
+  setMenuOpen(false, { focusButton: true });
+  menuActions[item.dataset.action]?.();
 });
 
-els.reset.addEventListener("click", () => {
-  render(JIRA_HELPER_DEFAULTS);
-  save({ ...JIRA_HELPER_DEFAULTS });
+// Up/Down move between items, Escape closes
+els.menu.addEventListener("keydown", (e) => {
+  const items = menuItems();
+  const i = items.indexOf(document.activeElement);
+  if (e.key === "Escape") {
+    e.preventDefault();
+    setMenuOpen(false, { focusButton: true });
+  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const step = e.key === "ArrowDown" ? 1 : -1;
+    items[(i + step + items.length) % items.length]?.focus();
+  }
+});
+
+// Close when clicking anywhere else
+document.addEventListener("click", (e) => {
+  if (!els.menu.hidden && !e.target.closest(".menu")) setMenuOpen(false);
 });
 
 chrome.storage.sync.get(JIRA_HELPER_DEFAULTS, render);
