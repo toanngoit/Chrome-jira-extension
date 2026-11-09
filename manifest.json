@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Jira Helper",
-  "version": "1.0.0",
-  "description": "Dim child work items that are already Dev Done on Jira issues, so developers can focus on what is left. By Colton.",
+  "version": "1.0.2",
+  "description": "Dim or hide finished child work items on Jira issues so you can focus on what is left, and jump to any issue by key. By Colton.",
   "action": {
     "default_title": "Jira Helper",
     "default_popup": "popup.html",

@@ -102,9 +102,23 @@
       </button>
       <div id="menu" class="menu-list" role="menu" aria-labelledby="menuButton" hidden>
         <button type="button" role="menuitem" data-action="reset">Reset to defaults</button>
+        <button type="button" role="menuitem" data-action="about">About</button>
       </div>
     </div>
   </footer>
+
+  <!-- Version and description are filled in from manifest.json -->
+  <dialog id="aboutDialog" class="about" aria-labelledby="aboutTitle">
+    <div class="about-header">
+      <img src="icons/icon32.png" alt="" width="22" height="22">
+      <h2 id="aboutTitle">Jira Helper</h2>
+      <span id="aboutVersion" class="badge"></span>
+    </div>
+    <p id="aboutDescription"></p>
+    <form method="dialog" class="about-actions">
+      <button type="submit" class="primary-button">Close</button>
+    </form>
+  </dialog>
 
   <script src="config.js"></script>
   <script src="popup.js"></script>

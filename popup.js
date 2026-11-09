@@ -122,6 +122,13 @@ const menuActions = {
     render(JIRA_HELPER_DEFAULTS);
     save({ ...JIRA_HELPER_DEFAULTS });
   },
+  about() {
+    const { name, version, description } = chrome.runtime.getManifest();
+    $("aboutTitle").textContent = name;
+    $("aboutVersion").textContent = `v${version}`;
+    $("aboutDescription").textContent = description;
+    $("aboutDialog").showModal();
+  },
 };
 
 els.menuButton.addEventListener("click", () => setMenuOpen(els.menu.hidden));
