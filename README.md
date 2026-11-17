@@ -31,6 +31,12 @@ Settings in the popup (saved to `chrome.storage.sync`, applied to open Jira tabs
 - Hide work items on or off (turning one on turns the other off)
 - Status list and assignee list (one per line)
 
+### Reload Child work items
+
+The **↻** button next to "Choose what to do with work items:" reloads the Child work items table in the current Jira tab, so new items and status changes show up without refreshing the whole page. The sort order stays as it was.
+
+Jira's search can lag a few seconds behind a change; if a just-changed status still looks old, wait a moment and reload again.
+
 ## How it works
 
 `content.js` runs on `https://*.atlassian.net/*`. For each `tr[data-testid="native-issue-table.ui.issue-row"]` it reads:
@@ -39,6 +45,8 @@ Settings in the popup (saved to `chrome.storage.sync`, applied to open Jira tabs
 - **Assignee** from any element whose `data-testid` contains `assignee`, plus the cell under the "Assignee" column header; the visible text, avatar `alt`, `aria-label` and `title` are all checked
 
 Matching rows get a `data-jira-helper-match` attribute, and one injected `<style>` dims or hides them. A `MutationObserver` re-checks rows whenever Jira re-renders the table.
+
+The Child work items panel has no refresh button of its own, but each click on a column's sort button re-runs the panel's query and fetches fresh rows from the server. On a `refreshChildItems` message from the popup, `content.js` clicks the first sort button through its cycle (unsorted → ascending → descending → unsorted) until it is back where it started, then waits for the table to settle.
 
 ## Install (developer mode)
 
@@ -52,7 +60,7 @@ Matching rows get a `data-jira-helper-match` attribute, and one injected `<style
 | --- | --- |
 | `manifest.json` | Extension manifest |
 | `config.js` | Default settings shared by the content script and popup, plus the Jira site used by quick navigation |
-| `content.js` | Dims or hides Dev Done rows on Jira pages |
+| `content.js` | Dims or hides Dev Done rows on Jira pages, and reloads the Child work items table on request |
 | `popup.html` / `popup.css` / `popup.js` | Settings popup |
 | `quicknav.js` | Popup quick navigation (Home / issue key / Go) |
 | `icons/jira-helper.svg` | Source icon |

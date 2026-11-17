@@ -107,6 +107,48 @@ function saveListOnInput(textarea, key) {
 saveListOnInput(els.devDoneStatuses, "devDoneStatuses");
 saveListOnInput(els.assignees, "assignees");
 
+// Reload "Child work items" in the current Jira tab (done by content.js)
+const refreshBtn = $("refreshChildren");
+const REFRESH_TITLE = refreshBtn.title;
+let refreshResetTimer;
+
+function showRefreshResult(state, message) {
+  refreshBtn.classList.remove("busy");
+  refreshBtn.classList.add(state);
+  refreshBtn.disabled = false;
+  refreshBtn.title = message;
+  els.saved.textContent = message;
+  clearTimeout(refreshResetTimer);
+  refreshResetTimer = setTimeout(() => {
+    refreshBtn.classList.remove("done", "failed");
+    refreshBtn.title = REFRESH_TITLE;
+    if (els.saved.textContent === message) els.saved.textContent = "";
+  }, 2500);
+}
+
+refreshBtn.addEventListener("click", async () => {
+  refreshBtn.classList.remove("done", "failed");
+  refreshBtn.classList.add("busy");
+  refreshBtn.disabled = true;
+  els.saved.textContent = "Reloading…";
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) {
+    showRefreshResult("failed", "Open a Jira issue first");
+    return;
+  }
+  chrome.tabs.sendMessage(tab.id, { type: "refreshChildItems" }, (res) => {
+    if (chrome.runtime.lastError || !res) {
+      // No content script answered: not a Jira tab, or the tab was opened
+      // before the extension was (re)loaded and still runs the old script
+      showRefreshResult("failed", "Reload this Jira tab once, then try again");
+    } else if (res.ok) {
+      showRefreshResult("done", `Reloaded ${res.rows} items`);
+    } else {
+      showRefreshResult("failed", res.error);
+    }
+  });
+});
+
 // "More" (…) menu
 const menuItems = () => [...els.menu.querySelectorAll('[role="menuitem"]')];
 

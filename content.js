@@ -150,6 +150,91 @@
     characterData: true,
   });
 
+  // ---- Refresh "Child work items" without reloading the page ----
+  // Jira's child panel has no refresh button, but clicking a column's sort button
+  // re-runs the panel's own query (fresh data from the server). Cycling the sort
+  // (none -> asc -> desc -> none) until the label is back to where it started
+  // reloads the rows and leaves the user's sort order unchanged.
+  const CHILD_HEADING = '[data-testid="issue.views.common.child-issues-panel.heading.title"]';
+  const CHILD_TOGGLE = '[data-testid="issue.views.common.collapsible-section.CHILD_WORK_ITEM.toggle"]';
+  const SORT_BUTTON =
+    '[data-testid="native-issue-table.ui.issue-table.header.header-cell.header-cell-actions.sort-button.icon-button"]';
+
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const label = (el) => normalize(el?.textContent);
+  const columnOf = (el) => label(el).split("•")[0].trim();
+
+  // Smallest ancestor of the panel heading that also holds the table's sort buttons
+  function childPanel() {
+    let el = document.querySelector(CHILD_HEADING);
+    for (let i = 0; el && i < 15; i++, el = el.parentElement) {
+      if (el.querySelector(SORT_BUTTON)) return el;
+    }
+    return null;
+  }
+
+  async function waitFor(check, timeout) {
+    const end = Date.now() + timeout;
+    while (Date.now() < end) {
+      if (check()) return true;
+      await wait(50);
+    }
+    return false;
+  }
+
+  // Resolves once the panel has stopped changing for `quietMs`
+  function waitForQuiet(target, quietMs = 400, timeout = 8000) {
+    return new Promise((resolve) => {
+      let timer;
+      const done = () => { observer.disconnect(); clearTimeout(timer); clearTimeout(cap); resolve(); };
+      const observer = new MutationObserver(() => { clearTimeout(timer); timer = setTimeout(done, quietMs); });
+      observer.observe(target, { childList: true, subtree: true, characterData: true });
+      timer = setTimeout(done, quietMs);
+      const cap = setTimeout(done, timeout);
+    });
+  }
+
+  let refreshing = false;
+  async function refreshChildItems() {
+    if (refreshing) return { ok: false, error: "Already refreshing" };
+    const panel = childPanel();
+    if (!panel) {
+      // The section toggle reads "Expand Child work items" while collapsed
+      const collapsed = label(document.querySelector(CHILD_TOGGLE)).startsWith("expand");
+      const error = !document.querySelector(CHILD_HEADING)
+        ? "No Child work items on this page"
+        : collapsed
+        ? "Expand Child work items first"
+        : "No child work items to reload";
+      return { ok: false, error };
+    }
+    refreshing = true;
+    try {
+      const column = columnOf(panel.querySelector(SORT_BUTTON));
+      const button = () =>
+        [...(childPanel()?.querySelectorAll(SORT_BUTTON) || [])].find((b) => columnOf(b) === column);
+      const start = label(button());
+      for (let i = 0; i < 4; i++) {
+        const before = label(button());
+        button()?.click();
+        await waitFor(() => button() && label(button()) !== before, 3000);
+        if (label(button()) === start) break;
+      }
+      await waitForQuiet(childPanel() || document.body);
+      const rows = childPanel()?.querySelectorAll(ROW_SELECTOR).length ?? 0;
+      console.info(`[Jira Helper] Reloaded Child work items (${rows} rows, sorted by ${column})`);
+      return { ok: true, rows };
+    } finally {
+      refreshing = false;
+    }
+  }
+
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg?.type !== "refreshChildItems") return;
+    refreshChildItems().then(sendResponse, (e) => sendResponse({ ok: false, error: String(e) }));
+    return true; // respond asynchronously
+  });
+
   chrome.storage.sync.get(JIRA_HELPER_DEFAULTS, applySettings);
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "sync") return;
